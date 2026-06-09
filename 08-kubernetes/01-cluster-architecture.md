@@ -73,4 +73,25 @@ Worker nodes are where actual application workloads (pods) are deployed.
 5. The `kubelet` on that node pulls the image and starts the container
 6. `kube-proxy` and `service` route traffic to the pod
 
+
+
+
+**Interview Questoin and Answers**
 ---
+| Question | Expected Answer |
+| --- | --- |
+| What is the role of API Server? | Entry point for all Kubernetes operations |
+| What does Scheduler do? | Selects best node for pod placement |
+| What is etcd? | Distributed key-value store for cluster state |
+| Why is Kubelet required? | Executes and manages pods on nodes |
+| What does Kube Proxy do? | Service networking and traffic routing |
+| Who maintains desired state? | Controller Manager |
+| Is Docker mandatory in Kubernetes? | No, Kubernetes can use containerd or CRI-O |
+| Which component stores Kubernetes objects? | etcd |
+
+
+**Scheduler does:**
+Which node has enough CPU?
+Which node has enough memory?
+Which node satisfies affinity rules?
+Which node satisfies taints/tolerations??
