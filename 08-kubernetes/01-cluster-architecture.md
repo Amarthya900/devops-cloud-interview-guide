@@ -27,7 +27,7 @@ The control plane manages and maintains the desired state of the cluster (e.g., 
 |-------------------|---------|
 | **kube-apiserver** | Entry point to the cluster. All communication (kubectl, controllers) goes through this REST API. |
 | **etcd**           | Distributed key-value store for storing all cluster data (configuration, state, secrets, etc.). |
-| **kube-scheduler** | Assigns pods to nodes based on resource availability, taints/tolerations, affinities. |
+| **kube-scheduler** | Assigns pods to nodes based on resource availability,node affinity, taints/tolerations, affinities. |
 | **controller-manager** | Runs various controllers (e.g., Node, ReplicaSet, Job) to monitor and maintain the desired state. |
 
 ---
