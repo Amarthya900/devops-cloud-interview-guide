@@ -75,6 +75,8 @@ Worker nodes are where actual application workloads (pods) are deployed.
 
 ---
 
+## Chatgpt answer -
+
 # 1. Control Plane Components
 
 The control plane is the brain of Kubernetes.
