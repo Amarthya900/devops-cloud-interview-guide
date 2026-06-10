@@ -110,6 +110,16 @@ iptables -F
 
 Here's an example of how to use the `iptables -D` command to delete a specific rule from the INPUT chain:
 
+# Alternative commands
+```
+sudo iptables-D INPUT-p tcp--dport22-j DROP
+```
+
+or
+
+```
+sudo iptables-A INPUT-p tcp--dport22-j ACCEPT
+```
 ### Example Scenario
 
 Let's say you have the following rules in your INPUT chain:
@@ -157,583 +167,551 @@ Now, the output should no longer include the rule for SSH traffic.
 
 ---
 
-# 2. Filesystem
+# Command 2
 
-## Command
+```
+sudo iptables-t nat-L
+```
 
-```bash
-df -Th
+This is far more important for Kubernetes.
+
+---
+
+# What Is NAT?
+
+Network Address Translation.
+
+Converts one IP into another.
+
+Example:
+
+```
+Service IP
+10.96.0.10
+```
+
+actually forwards traffic to
+
+```
+Pod IP
+10.244.1.15
+```
+
+How?
+
+Using NAT rules.
+
+---
+
+# Kubernetes Uses NAT Everywhere
+
+Example:
+
+```
+Client
+  |
+Service IP
+10.96.0.100
+  |
+NAT Rule
+  |
+Pod
+10.244.1.12
 ```
 
 ---
 
-## Why Do We Run It?
-
-To check:
-
-- Disk usage
-- Filesystem type
-- Available storage
-
-Very common in Kubernetes node troubleshooting.
-
----
-
-## Sample Output
+# Example Output
 
 ```
-Filesystem     Type  Size Used Avail Use%
-/dev/sda1      ext4   50G  48G   2G  96%
+Chain KUBE-SERVICES
+
+target    prot source  destination
+
+KUBE-SVC-ABC123
+```
+
+This was created automatically by:
+
+```
+Kube Proxy
 ```
 
 ---
 
-## How To Read It
+# Real Production Scenario 1
 
-| Column | Meaning |
+Service Not Working
+
+---
+
+You create:
+
+```
+kubectl expose deployment nginx
+```
+
+Service gets created.
+
+---
+
+Check Service:
+
+```
+kubectlget svc
+```
+
+Output:
+
+```
+nginx-service
+10.96.10.25
+```
+
+---
+
+But:
+
+```
+curl10.96.10.25
+```
+
+fails.
+
+---
+
+Now check NAT table:
+
+```
+iptables-t nat-L
+```
+
+Look for:
+
+```
+KUBE-SERVICES
+```
+
+---
+
+If missing:
+
+```
+Kube Proxy problem
+```
+
+---
+
+# Investigation
+
+Check:
+
+```
+kubectlget pods-n kube-system
+```
+
+Verify:
+
+```
+kube-proxy Running?
+```
+
+---
+
+Fix:
+
+```
+kubectl rolloutrestart daemonset kube-proxy-n kube-system
+```
+This command is commonly used when:
+
+- You need to apply new configurations or updates to the `kube-proxy` component.
+- You want to troubleshoot issues related to networking in the cluster.
+- You need to refresh the DaemonSet pods without taking down the entire service.
+  - Reason: 
+  Refreshing the DaemonSet pods without taking down the entire service ensures that the application remains available and responsive during updates. This approach enhances service reliability and user experience by preventing disruptions that could occur if all instances were taken down simultaneously.
+  We run this to refresh DaemonSet pods: 
+      ``` 
+      kubectl rollout restart daemonset kube-proxy -n kube-system
+      ```
+---
+
+# Real Production Scenario 2
+
+Pod Reachable Directly But Service Fails
+
+---
+
+This works:
+
+```
+curl10.244.1.15
+```
+
+But this fails:
+
+```
+curl10.96.0.25
+```
+
+Immediately suspect:
+
+```
+iptables NAT rule issue
+```
+
+Check:
+
+```
+iptables-t nat-L
+```
+
+---
+
+Possible causes:
+
+| Cause | Explanation |
 | --- | --- |
-| Filesystem | Disk |
-| Type | Filesystem Type |
-| Size | Total Disk |
-| Used | Used Space |
-| Avail | Free Space |
-| Use% | Disk Usage |
+| kube-proxy crash | NAT rules missing |
+| endpoint missing | service has no backend |
+| CNI issue | networking broken |
+| iptables corruption | rules missing |
 
 ---
 
-## Problem
+# Real Production Scenario 3
+
+NodePort Not Accessible
+
+Service:
 
 ```
-96% Full
-```
-
-Very dangerous.
-
-At:
-
-```
-100%
-```
-
-Node may become:
-
-```
-NotReady
-```
-
-Pods may fail.
-
----
-
-## Solution
-
-Find large files:
-
-```bash
-du -sh /*
-```
-
-or
-
-```bash
-du -sh /var/*
-```
-
-Cleanup:
-
-```bash
-docker system prune
-```
-
-or
-
-```bash
-journalctl --vacuum-time=7d
-```
-## Breakdown of the Command 
-
-- journalctl: This is a command-line utility for querying and displaying messages from the journal, which is a component of systemd that collects and stores log data. and 
-- --vacuum-time=7d: This option instructs journalctl to delete journal entries that are older than 7 days.
-
----
-
-# 3. Mount Points
-
-## Command
-
-```bash
-mount
-```
-
-or
-
-```bash
-df -h
+type: NodePort
 ```
 
 ---
 
-## Why Do We Run It?
+User accesses:
+
+```
+http://NodeIP:30080
+```
+
+Fails.
+
+---
 
 Check:
 
 ```
-Is storage mounted?
+iptables-t nat-L
 ```
 
-Very common with:
-
-- EBS
-- NFS
-- Persistent Volumes
-
----
-
-## Output
+Look for:
 
 ```
-/dev/sdb on /data type ext4
+KUBE-NODEPORTS
 ```
 
 ---
 
-## Meaning
+If absent:
 
 ```
-Disk = /dev/sdb
-
-Mounted at
-
-/data
+NodePort routing broken
 ```
 
 ---
 
-## Real Issue
-
-Application says:
+Usually:
 
 ```
-No such file or directory
+kube-proxy issue
 ```
+
+---
+
+# Real Production Scenario 4
+
+Load Balancer Working Intermittently
+
+Sometimes request succeeds.
+
+Sometimes fails.
+
+---
 
 Check:
 
-```bash
-mount
+```
+iptables-t nat-L
 ```
 
-Expected:
+You may see:
 
 ```
-/data
+Backend Pod A
+Backend Pod B
+Backend Pod C
 ```
 
-Not found.
+One backend unhealthy.
 
-Meaning:
+---
+
+Verify:
 
 ```
-Storage not mounted
+kubectlget endpoints
 ```
 
 ---
 
-## Fix
+# Real Production Scenario 5
 
-```bash
-mount /dev/sdb /data
+Worker Node Cannot Reach Internet
+
+Pod pulling image fails:
+
+```
+ImagePullBackOff
 ```
 
 ---
 
-# 4. Swap
+Check:
 
-## Command
+```
+iptables-L
+```
 
-```bash
-swapon --show
+Output:
+
+```
+DROP all outbound traffic
+```
+
+or
+
+```
+FORWARD DROP
 ```
 
 ---
 
-## Why?
-
-Before installing Kubernetes.
-
----
-
-## Output
+Result:
 
 ```
-NAME      TYPE SIZE USED
-/swapfile file 2G 500M
+Node cannot reach DockerHub
 ```
 
 ---
 
-## Meaning
+Fix:
 
-Swap enabled.
+Allow outbound traffic.
 
 ---
 
-## Kubernetes Problem
+# Kubernetes Chains You Must Know
 
 Run:
 
-```bash
-kubeadm init
+```
+iptables-t nat-L
 ```
 
-Error:
+You'll often see:
 
 ```
-swap is enabled
-```
-
----
-
-## Fix
-
-Temporary:
-
-```bash
-swapoff -a
-```
-
-Permanent:
-
-Edit:
-
-```bash
-/etc/fstab
-```
-
-Comment swap entry.
-
----
-
-# 5. Systemd
-
-## Command
-
-```bash
-systemctl status kubelet
+KUBE-SERVICES
+KUBE-NODEPORTS
+KUBE-POSTROUTING
+KUBE-MARK-MASQ
 ```
 
 ---
 
-## Why?
+## KUBE-SERVICES
 
-Most common Kubernetes troubleshooting command.
-
----
-
-## Healthy Output
+Handles:
 
 ```
-Active: active (running)
-```
-
-Good.
-
----
-
-## Problem Output
-
-```
-Active: failed
-```
-
-or
-
-```
-Active: inactive
+ClusterIP Services
 ```
 
 ---
 
-## Meaning
+## KUBE-NODEPORTS
 
-Kubelet not running.
+Handles:
 
-Node won't join cluster.
-
----
-
-## Fix
-
-Start:
-
-```bash
-systemctl start kubelet
 ```
-
-Enable:
-
-```bash
-systemctl enable kubelet
+NodePort Services
 ```
 
 ---
 
-# 6. journalctl
+## KUBE-POSTROUTING
 
-## Command
+Handles:
 
-```bash
-journalctl -u kubelet
+```
+Source NAT
 ```
 
 ---
 
-## Why?
+## KUBE-MARK-MASQ
 
-See kubelet logs.
+Handles:
+
+```
+Masquerading traffic
+```
+
+Used when traffic leaves cluster.
 
 ---
 
-## Real Issue
+# Debugging Flow Used By SREs
 
-Node status:
+Whenever networking breaks:
 
-```
-NotReady
-```
+### Step 1
 
----
-
-## Run
-
-```bash
-journalctl -u kubelet
-```
-
-Output:
+Check pod
 
 ```
-failed to connect to container runtime
+kubectlget pods-o wide
 ```
 
 ---
 
-## Meaning
+### Step 2
 
-Kubelet cannot talk to containerd.
+Check service
 
----
-
-## Next Step
-
-Check:
-
-```bash
-systemctl status containerd
+```
+kubectlget svc
 ```
 
 ---
 
-## Another Example
+### Step 3
 
-Output:
-
-```
-certificate expired
-```
-
-Meaning:
+Check endpoints
 
 ```
-Node certificate expired
-```
-
-Renew certificates.
-
----
-
-# 7. Syslog
-
-## Command
-
-```bash
-tail -f /var/log/syslog
-```
-
-or
-
-```bash
-cat /var/log/messages
+kubectlget endpoints
 ```
 
 ---
 
-## Why?
+### Step 4
 
-Observe system events live.
-
----
-
-## Output
+Check kube-proxy
 
 ```
-disk pressure detected
+kubectlget pods-n kube-system
 ```
 
 ---
 
-## Meaning
+### Step 5
 
-Disk nearly full.
+Check iptables
 
----
-
-## Solution
-
-```bash
-df -h
+```
+iptables-L
 ```
 
-Then cleanup.
+and
 
----
-
-# 8. SELinux
-
-## Command
-
-```bash
-getenforce
+```
+iptables-t nat-L
 ```
 
 ---
 
-## Output
+### Step 6
+
+Verify KUBE chains exist
 
 ```
-Enforcing
-```
-
----
-
-## Meaning
-
-SELinux active.
-
----
-
-## Real Issue
-
-Application cannot access file.
-
-Even though:
-
-```
-chmod 777
-```
-
-is applied.
-
-Still fails.
-
----
-
-## Check
-
-```bash
-getenforce
-```
-
-Output:
-
-```
-Enforcing
+KUBE-SERVICES
+KUBE-NODEPORTS
 ```
 
 ---
 
-## Verify
+### Step 7
 
-```bash
-setenforce 0
-```
-
-Application works.
-
-Root cause:
+Trace traffic
 
 ```
-SELinux policy blocking access
+curl
+ping
+telnet
+nc
 ```
 
 ---
 
-## Fix
+# Interview Question
 
-Don't disable permanently.
+### Why does Kubernetes use IPTables?
 
-Instead update policy.
+Answer:
+
+> Kubernetes uses IPTables through kube-proxy to implement Service networking. IPTables creates NAT and routing rules that map Service IPs and NodePorts to the actual Pod IPs running on worker nodes.
+> 
 
 ---
 
-# 9. AppArmor
+# Quick Memory Trick
 
-## Command
+Think:
 
-```bash
-aa-status
+```
+iptables -L
+```
+
+= Firewall Rules
+
+Questions:
+
+```
+Can traffic enter?
+Can traffic leave?
+Is port blocked?
 ```
 
 ---
 
-## Output
+Think:
 
 ```
-10 profiles loaded
-5 profiles enforced
+iptables -t nat -L
 ```
 
----
+= Traffic Redirection Rules
 
-## Meaning
-
-AppArmor active.
-
----
-
-## Real Kubernetes Issue
-
-Pod starts.
-
-Immediately crashes.
-
----
-
-## Logs
+Questions:
 
 ```
-Permission denied
+Service -> Pod working?
+NodePort working?
+Load balancing working?
+Kube Proxy working?
 ```
 
----
+This is exactly how Kubernetes networking troubleshooting is done in real production environments, and interviewers often ask a scenario like:
 
-## Check
+> "A pod is healthy, but the Service is not reachable. How would you troubleshoot?"
+> 
 
-```bash
-aa-status
-```
-
-AppArmor profile blocking action.
-
----
-
-## Fix
-
-Modify profile.
-
-Not disable AppArmor.
-
----
+A strong answer would include checking **Endpoints → kube-proxy → iptables NAT rules → CNI networking** in that order.
 
 # Most Common Kubernetes Troubleshooting Flow
 

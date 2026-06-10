@@ -324,7 +324,12 @@ Kube Proxy ensures request reaches correct pod.
 > Kube Proxy enables communication between services and pods through network rule management.
 
 ---
-
+| Component | Runs Where? | Main Responsibility | Creates Pods? | Runs Continuously? |
+| --- | --- | --- | --- | --- |
+| **Scheduler** | Control Plane | Decides which node should run a pod | ❌ No | ✅ Yes |
+| **Kubelet** | Every Worker Node | Makes sure assigned pods are actually running | ❌ No (asks runtime) | ✅ Yes |
+| **DaemonSet** | Kubernetes Object | Ensures one pod runs on selected nodes | ✅ Indirectly | ❌ Not a process |
+| **Kube Proxy** | Every Worker Node | Handles Service networking and traffic routing | ❌ No | ✅ Yes |
 
 # End-to-End Flow (Most Important Interview Section)
 
