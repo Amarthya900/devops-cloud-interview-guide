@@ -83,7 +83,7 @@ The control plane is the brain of Kubernetes.
 
 Its responsibility is:
 
-- Accept requests
+- Accept requests - like deploying applications, scaling workloads, or changing configs.
 - Make scheduling decisions
 - Maintain desired state
 - Store cluster information
