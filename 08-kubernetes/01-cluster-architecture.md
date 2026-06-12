@@ -216,6 +216,8 @@ Actual State:
 
 Controller Manager detects the difference and creates another pod.
 
+Controllers know the desired state through user-defined manifests stored in etcd, which they access via the Kubernetes API server. They continuously monitor the actual state of resources and act to ensure that the current state matches the desired state. This continuous reconciliation process is key to Kubernetes' self-healing capabilities.
+
 ### Important Controllers
 
 | Controller | Responsibility |
