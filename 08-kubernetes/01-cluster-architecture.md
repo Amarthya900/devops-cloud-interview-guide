@@ -136,6 +136,7 @@ Which node has enough memory?
 Which node satisfies affinity rules?
 Which node satisfies taints/tolerations?
 ```
+Ref next file - 1.2 for detailed explanation on scheduler jobs. 
 
 ### Factors Considered
 
