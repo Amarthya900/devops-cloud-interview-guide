@@ -63,7 +63,7 @@ This sends a REST request to the Kubernetes API server.
 
 - It considers available resources, taints, affinities, and other rules.
 - It assigns the pod to a specific node by updating the pod spec with `nodeName`.
-
+-  You do NOT write scheduler rules in a separate Scheduler YAML. You write them inside the Pod specification (spec.template.spec) of a Deployment, ReplicaSet, StatefulSet, Job, or Pod.The scheduler reads these rules from the Pod spec and decides where to place the Pod.
 ---
 
 ## 🔧 Step 5: kubelet on the selected node takes over
