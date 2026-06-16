@@ -1,4 +1,4 @@
-## Can a Pod Access a Service in a Different Namespace? If Yes, How?
+# Can a Pod Access a Service in a Different Namespace? If Yes, How?
 
 ### Question
 
@@ -265,6 +265,11 @@ Cannot modify Deployments
 
 unless RBAC grants permissions.
 
+## What is Service Account and Why we use it?  (Ref next page )
+
+1.  **Service Account** in Kubernetes is a critical component for managing authentication and authorization for applications running in Pods.
+2. For instance, if you have a microservice that needs to access a Kubernetes ConfigMap or Secret, you would create a service account with the necessary permissions to read those resources. The microservice would use this service account to authenticate and authorize its requests to the Kubernetes API.
+
 ---
 
 ## Key Concept
@@ -476,3 +481,7 @@ A request can pass DNS but fail NetworkPolicy.
 A request can pass NetworkPolicy but fail RBAC.
 
 They solve completely different problems.
+
+---
+
+---
