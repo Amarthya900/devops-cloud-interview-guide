@@ -48,8 +48,12 @@ Kubernetes DNS resolves the service name in this order:
 ---
 
 #### 🔵 2. Using the ClusterIP (not recommended long-term)
+If your service is in a different namespace, you can specify it using the -n flag to get the clusterIP
+```
+ kubectl get services -n your-namespace
+```
 
-You can also hit the Service’s ClusterIP directly:
+Now You can also hit the Service’s ClusterIP directly:
 
 ```bash
 curl http://10.96.24.7:80
