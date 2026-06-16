@@ -80,7 +80,7 @@ This sends a REST request to the Kubernetes API server.
 - **kube-proxy** sets up networking rules through ip tables or ipvs to route traffic(load balancing) to the pod if it's part of a Service.
 - DNS resolution (via CoreDNS) also becomes available.
   
-(Ref 2.2 page for more about ip tables, ipvs, dns resolution)
+(Ref 2.4 page for more about ip tables, ipvs, dns resolution)
 
 ---
 
