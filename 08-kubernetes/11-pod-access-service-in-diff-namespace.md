@@ -38,7 +38,7 @@ From a pod in **namespace `frontend`** you can reach it via:
 curl http://api.backend.svc.cluster.local:80
 ```
 
-Kubernetes DNS resolves the service name in this order:
+Kubernetes Core DNS resolves the service name in this order to the clusterIP:
 
 1. `api` (same namespace)  
 2. `api.backend`  
